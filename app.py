@@ -1,6 +1,38 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+# =========================================================
+# SMART FINANCIAL DATA MAPPING
+# =========================================================
+
+def find_financial_value(df, possible_names):
+
+    for column in df.columns:
+
+        clean_column = (
+            str(column)
+            .strip()
+            .lower()
+            .replace("_", " ")
+            .replace("-", " ")
+        )
+
+        for name in possible_names:
+
+            if name in clean_column:
+
+                series = pd.to_numeric(
+                    df[column],
+                    errors="coerce"
+                )
+
+                if series.notna().any():
+
+                    return float(
+                        series.dropna().iloc[-1]
+                    )
+
+    return 0.0
 
 # =========================================================
 # PAGE CONFIG
@@ -82,6 +114,169 @@ if input_method == "📂 Upload Excel / CSV":
 
             else:
                 uploaded_df = pd.read_excel(uploaded_file)
+# =====================================================
+# AUTOMATIC FINANCIAL FIELD DETECTION
+# =====================================================
+
+revenue = find_financial_value(
+    uploaded_df,
+    [
+        "revenue",
+        "sales",
+        "net sales",
+        "turnover"
+    ]
+)
+
+cogs = find_financial_value(
+    uploaded_df,
+    [
+        "cogs",
+        "cost of goods sold",
+        "cost of sales",
+        "cost of revenue"
+    ]
+)
+
+operating_expenses = find_financial_value(
+    uploaded_df,
+    [
+        "operating expenses",
+        "operating expense",
+        "opex"
+    ]
+)
+
+interest_expense = find_financial_value(
+    uploaded_df,
+    [
+        "interest expense",
+        "interest cost",
+        "finance cost"
+    ]
+)
+
+tax_expense = find_financial_value(
+    uploaded_df,
+    [
+        "tax expense",
+        "income tax",
+        "tax"
+    ]
+)
+
+cash = find_financial_value(
+    uploaded_df,
+    [
+        "cash and cash equivalents",
+        "cash & cash equivalents",
+        "cash equivalents",
+        "cash"
+    ]
+)
+
+accounts_receivable = find_financial_value(
+    uploaded_df,
+    [
+        "accounts receivable",
+        "account receivable",
+        "trade receivables",
+        "receivables"
+    ]
+)
+
+inventory = find_financial_value(
+    uploaded_df,
+    [
+        "inventory",
+        "inventories",
+        "stock"
+    ]
+)
+
+current_assets = find_financial_value(
+    uploaded_df,
+    [
+        "current assets",
+        "total current assets"
+    ]
+)
+
+total_assets = find_financial_value(
+    uploaded_df,
+    [
+        "total assets",
+        "assets"
+    ]
+)
+
+current_liabilities = find_financial_value(
+    uploaded_df,
+    [
+        "current liabilities",
+        "total current liabilities"
+    ]
+)
+
+total_liabilities = find_financial_value(
+    uploaded_df,
+    [
+        "total liabilities",
+        "liabilities"
+    ]
+)
+
+equity = find_financial_value(
+    uploaded_df,
+    [
+        "shareholders equity",
+        "shareholders' equity",
+        "stockholders equity",
+        "total equity",
+        "equity"
+    ]
+)
+st.subheader("🔍 Financial Fields Detected")
+
+detected_data = pd.DataFrame({
+    "Financial Item": [
+        "Revenue",
+        "COGS",
+        "Operating Expenses",
+        "Interest Expense",
+        "Tax Expense",
+        "Cash",
+        "Accounts Receivable",
+        "Inventory",
+        "Current Assets",
+        "Total Assets",
+        "Current Liabilities",
+        "Total Liabilities",
+        "Equity"
+    ],
+
+    "Detected Value": [
+        revenue,
+        cogs,
+        operating_expenses,
+        interest_expense,
+        tax_expense,
+        cash,
+        accounts_receivable,
+        inventory,
+        current_assets,
+        total_assets,
+        current_liabilities,
+        total_liabilities,
+        equity
+    ]
+})
+
+st.dataframe(
+    detected_data,
+    use_container_width=True,
+    hide_index=True
+)
 
             st.success("✅ File uploaded successfully!")
 
