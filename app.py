@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
 # ==========================================
 # PAGE CONFIGURATION
@@ -526,4 +527,181 @@ st.dataframe(
     profit_data,
     use_container_width=True,
     hide_index=True
+)
+# ==========================================
+# FINANCIAL CHARTS
+# ==========================================
+
+st.divider()
+
+st.header("📊 Financial Charts")
+
+# ==========================================
+# CHART 1 — PROFIT BREAKDOWN
+# ==========================================
+
+st.subheader("💰 Profit Breakdown")
+
+profit_chart_data = pd.DataFrame({
+    "Metric": [
+        "Revenue",
+        "Gross Profit",
+        "Operating Profit",
+        "Net Profit"
+    ],
+    "Amount": [
+        revenue,
+        gross_profit,
+        operating_profit,
+        net_profit
+    ]
+})
+
+fig_profit = px.bar(
+    profit_chart_data,
+    x="Metric",
+    y="Amount",
+    title="Revenue & Profit Breakdown",
+    text="Amount"
+)
+
+fig_profit.update_traces(
+    texttemplate="%{text:,.0f}",
+    textposition="outside"
+)
+
+fig_profit.update_layout(
+    xaxis_title="",
+    yaxis_title="Amount",
+    showlegend=False
+)
+
+st.plotly_chart(
+    fig_profit,
+    use_container_width=True
+)
+
+
+# ==========================================
+# CHART 2 — EXPENSE STRUCTURE
+# ==========================================
+
+st.subheader("💸 Expense Structure")
+
+expense_chart_data = pd.DataFrame({
+    "Expense": [
+        "COGS",
+        "Operating Expenses",
+        "Interest Expense",
+        "Tax Expense"
+    ],
+    "Amount": [
+        cogs,
+        operating_expenses,
+        interest_expense,
+        tax_expense
+    ]
+})
+
+fig_expense = px.pie(
+    expense_chart_data,
+    names="Expense",
+    values="Amount",
+    title="Expense Distribution",
+    hole=0.45
+)
+
+st.plotly_chart(
+    fig_expense,
+    use_container_width=True
+)
+
+
+# ==========================================
+# CHART 3 — ASSETS VS LIABILITIES VS EQUITY
+# ==========================================
+
+st.subheader("🏦 Financial Position")
+
+position_chart_data = pd.DataFrame({
+    "Category": [
+        "Total Assets",
+        "Total Liabilities",
+        "Equity"
+    ],
+    "Amount": [
+        total_assets,
+        total_liabilities,
+        equity
+    ]
+})
+
+fig_position = px.bar(
+    position_chart_data,
+    x="Category",
+    y="Amount",
+    title="Assets vs Liabilities vs Equity",
+    text="Amount"
+)
+
+fig_position.update_traces(
+    texttemplate="%{text:,.0f}",
+    textposition="outside"
+)
+
+fig_position.update_layout(
+    xaxis_title="",
+    yaxis_title="Amount",
+    showlegend=False
+)
+
+st.plotly_chart(
+    fig_position,
+    use_container_width=True
+)
+
+
+# ==========================================
+# CHART 4 — RATIO OVERVIEW
+# ==========================================
+
+st.subheader("📈 Key Ratio Overview")
+
+ratio_chart_data = pd.DataFrame({
+    "Ratio": [
+        "Current Ratio",
+        "Quick Ratio",
+        "Cash Ratio",
+        "Debt-to-Equity"
+    ],
+    "Value": [
+        current_ratio,
+        quick_ratio,
+        cash_ratio,
+        debt_to_equity
+    ]
+})
+
+fig_ratio = px.bar(
+    ratio_chart_data,
+    x="Ratio",
+    y="Value",
+    title="Liquidity & Leverage Ratios",
+    text="Value"
+)
+
+fig_ratio.update_traces(
+    texttemplate="%{text:.2f}",
+    textposition="outside"
+)
+
+fig_ratio.update_layout(
+    xaxis_title="",
+    yaxis_title="Ratio",
+    showlegend=False
+)
+
+st.plotly_chart(
+    fig_ratio,
+    use_container_width=True
 )
