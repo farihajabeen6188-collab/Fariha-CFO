@@ -1,6 +1,17 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+
+# =========================================================
+# PAGE CONFIG
+# =========================================================
+
+st.set_page_config(
+    page_title="Fariha CFO",
+    page_icon="💰",
+    layout="wide"
+)
+
 # =========================================================
 # SMART FINANCIAL DATA MAPPING
 # =========================================================
@@ -34,22 +45,16 @@ def find_financial_value(df, possible_names):
 
     return 0.0
 
-# =========================================================
-# PAGE CONFIG
-# =========================================================
-
-st.set_page_config(
-    page_title="Fariha CFO",
-    page_icon="💰",
-    layout="wide"
-)
 
 # =========================================================
 # HEADER
 # =========================================================
 
 st.title("💰 Fariha CFO")
-st.subheader("Your AI-Powered Financial Manager")
+
+st.subheader(
+    "Your AI-Powered Financial Manager"
+)
 
 st.write(
     "Upload your financial data or enter it manually "
@@ -57,6 +62,7 @@ st.write(
 )
 
 st.divider()
+
 
 # =========================================================
 # DATA INPUT
@@ -72,6 +78,7 @@ input_method = st.radio(
     ],
     horizontal=True
 )
+
 
 # =========================================================
 # DEFAULT VALUES
@@ -92,8 +99,9 @@ current_liabilities = 0.0
 total_liabilities = 0.0
 equity = 0.0
 
+
 # =========================================================
-# OPTION 1 — EXCEL / CSV
+# OPTION 1 — EXCEL / CSV UPLOAD
 # =========================================================
 
 if input_method == "📂 Upload Excel / CSV":
@@ -110,175 +118,20 @@ if input_method == "📂 Upload Excel / CSV":
         try:
 
             if uploaded_file.name.endswith(".csv"):
-                uploaded_df = pd.read_csv(uploaded_file)
+
+                uploaded_df = pd.read_csv(
+                    uploaded_file
+                )
 
             else:
-                uploaded_df = pd.read_excel(uploaded_file)
-# =====================================================
-# AUTOMATIC FINANCIAL FIELD DETECTION
-# =====================================================
 
-revenue = find_financial_value(
-    uploaded_df,
-    [
-        "revenue",
-        "sales",
-        "net sales",
-        "turnover"
-    ]
-)
+                uploaded_df = pd.read_excel(
+                    uploaded_file
+                )
 
-cogs = find_financial_value(
-    uploaded_df,
-    [
-        "cogs",
-        "cost of goods sold",
-        "cost of sales",
-        "cost of revenue"
-    ]
-)
-
-operating_expenses = find_financial_value(
-    uploaded_df,
-    [
-        "operating expenses",
-        "operating expense",
-        "opex"
-    ]
-)
-
-interest_expense = find_financial_value(
-    uploaded_df,
-    [
-        "interest expense",
-        "interest cost",
-        "finance cost"
-    ]
-)
-
-tax_expense = find_financial_value(
-    uploaded_df,
-    [
-        "tax expense",
-        "income tax",
-        "tax"
-    ]
-)
-
-cash = find_financial_value(
-    uploaded_df,
-    [
-        "cash and cash equivalents",
-        "cash & cash equivalents",
-        "cash equivalents",
-        "cash"
-    ]
-)
-
-accounts_receivable = find_financial_value(
-    uploaded_df,
-    [
-        "accounts receivable",
-        "account receivable",
-        "trade receivables",
-        "receivables"
-    ]
-)
-
-inventory = find_financial_value(
-    uploaded_df,
-    [
-        "inventory",
-        "inventories",
-        "stock"
-    ]
-)
-
-current_assets = find_financial_value(
-    uploaded_df,
-    [
-        "current assets",
-        "total current assets"
-    ]
-)
-
-total_assets = find_financial_value(
-    uploaded_df,
-    [
-        "total assets",
-        "assets"
-    ]
-)
-
-current_liabilities = find_financial_value(
-    uploaded_df,
-    [
-        "current liabilities",
-        "total current liabilities"
-    ]
-)
-
-total_liabilities = find_financial_value(
-    uploaded_df,
-    [
-        "total liabilities",
-        "liabilities"
-    ]
-)
-
-equity = find_financial_value(
-    uploaded_df,
-    [
-        "shareholders equity",
-        "shareholders' equity",
-        "stockholders equity",
-        "total equity",
-        "equity"
-    ]
-)
-st.subheader("🔍 Financial Fields Detected")
-
-detected_data = pd.DataFrame({
-    "Financial Item": [
-        "Revenue",
-        "COGS",
-        "Operating Expenses",
-        "Interest Expense",
-        "Tax Expense",
-        "Cash",
-        "Accounts Receivable",
-        "Inventory",
-        "Current Assets",
-        "Total Assets",
-        "Current Liabilities",
-        "Total Liabilities",
-        "Equity"
-    ],
-
-    "Detected Value": [
-        revenue,
-        cogs,
-        operating_expenses,
-        interest_expense,
-        tax_expense,
-        cash,
-        accounts_receivable,
-        inventory,
-        current_assets,
-        total_assets,
-        current_liabilities,
-        total_liabilities,
-        equity
-    ]
-})
-
-st.dataframe(
-    detected_data,
-    use_container_width=True,
-    hide_index=True
-)
-
-            st.success("✅ File uploaded successfully!")
+            st.success(
+                "✅ File uploaded successfully!"
+            )
 
             st.subheader("📋 Uploaded Data")
 
@@ -288,20 +141,190 @@ st.dataframe(
             )
 
             st.info(
-                f"Your file contains {uploaded_df.shape[0]} rows "
-                f"and {uploaded_df.shape[1]} columns."
+                f"Your file contains "
+                f"{uploaded_df.shape[0]} rows and "
+                f"{uploaded_df.shape[1]} columns."
             )
 
-            st.warning(
-                "Automatic financial-statement mapping will be "
-                "added in the next stage. For now, the uploaded "
-                "data is being successfully read by Fariha CFO."
+            # =================================================
+            # AUTOMATIC FINANCIAL FIELD DETECTION
+            # =================================================
+
+            revenue = find_financial_value(
+                uploaded_df,
+                [
+                    "revenue",
+                    "sales",
+                    "net sales",
+                    "turnover"
+                ]
+            )
+
+            cogs = find_financial_value(
+                uploaded_df,
+                [
+                    "cogs",
+                    "cost of goods sold",
+                    "cost of sales",
+                    "cost of revenue"
+                ]
+            )
+
+            operating_expenses = find_financial_value(
+                uploaded_df,
+                [
+                    "operating expenses",
+                    "operating expense",
+                    "opex"
+                ]
+            )
+
+            interest_expense = find_financial_value(
+                uploaded_df,
+                [
+                    "interest expense",
+                    "interest cost",
+                    "finance cost"
+                ]
+            )
+
+            tax_expense = find_financial_value(
+                uploaded_df,
+                [
+                    "tax expense",
+                    "income tax",
+                    "tax"
+                ]
+            )
+
+            cash = find_financial_value(
+                uploaded_df,
+                [
+                    "cash and cash equivalents",
+                    "cash & cash equivalents",
+                    "cash equivalents",
+                    "cash"
+                ]
+            )
+
+            accounts_receivable = find_financial_value(
+                uploaded_df,
+                [
+                    "accounts receivable",
+                    "account receivable",
+                    "trade receivables",
+                    "receivables"
+                ]
+            )
+
+            inventory = find_financial_value(
+                uploaded_df,
+                [
+                    "inventory",
+                    "inventories",
+                    "stock"
+                ]
+            )
+
+            current_assets = find_financial_value(
+                uploaded_df,
+                [
+                    "current assets",
+                    "total current assets"
+                ]
+            )
+
+            total_assets = find_financial_value(
+                uploaded_df,
+                [
+                    "total assets",
+                    "assets"
+                ]
+            )
+
+            current_liabilities = find_financial_value(
+                uploaded_df,
+                [
+                    "current liabilities",
+                    "total current liabilities"
+                ]
+            )
+
+            total_liabilities = find_financial_value(
+                uploaded_df,
+                [
+                    "total liabilities",
+                    "liabilities"
+                ]
+            )
+
+            equity = find_financial_value(
+                uploaded_df,
+                [
+                    "shareholders equity",
+                    "shareholders' equity",
+                    "stockholders equity",
+                    "total equity",
+                    "equity"
+                ]
+            )
+
+            # =================================================
+            # DETECTED VALUES
+            # =================================================
+
+            st.subheader(
+                "🔍 Financial Fields Detected"
+            )
+
+            detected_data = pd.DataFrame({
+                "Financial Item": [
+                    "Revenue",
+                    "COGS",
+                    "Operating Expenses",
+                    "Interest Expense",
+                    "Tax Expense",
+                    "Cash",
+                    "Accounts Receivable",
+                    "Inventory",
+                    "Current Assets",
+                    "Total Assets",
+                    "Current Liabilities",
+                    "Total Liabilities",
+                    "Equity"
+                ],
+
+                "Detected Value": [
+                    revenue,
+                    cogs,
+                    operating_expenses,
+                    interest_expense,
+                    tax_expense,
+                    cash,
+                    accounts_receivable,
+                    inventory,
+                    current_assets,
+                    total_assets,
+                    current_liabilities,
+                    total_liabilities,
+                    equity
+                ]
+            })
+
+            st.dataframe(
+                detected_data,
+                use_container_width=True,
+                hide_index=True
+            )
+
+            st.success(
+                "✅ Financial data has been mapped successfully."
             )
 
         except Exception as e:
 
             st.error(
-                f"Unable to read this file: {e}"
+                f"Unable to process this file: {e}"
             )
 
     else:
@@ -317,7 +340,9 @@ st.dataframe(
 
 else:
 
-    st.subheader("✍️ Enter Financial Data")
+    st.subheader(
+        "✍️ Enter Financial Data"
+    )
 
     st.write(
         "Enter your latest financial figures below."
@@ -331,7 +356,9 @@ else:
 
     with col1:
 
-        st.markdown("### 💰 Income Statement")
+        st.markdown(
+            "### 💰 Income Statement"
+        )
 
         revenue = st.number_input(
             "Revenue",
@@ -369,7 +396,9 @@ else:
 
     with col2:
 
-        st.markdown("### 🏦 Balance Sheet")
+        st.markdown(
+            "### 🏦 Balance Sheet"
+        )
 
         cash = st.number_input(
             "Cash & Cash Equivalents",
@@ -497,7 +526,8 @@ else:
 if current_liabilities > 0:
 
     current_ratio = (
-        current_assets / current_liabilities
+        current_assets /
+        current_liabilities
     )
 
     quick_ratio = (
@@ -505,7 +535,8 @@ if current_liabilities > 0:
     ) / current_liabilities
 
     cash_ratio = (
-        cash / current_liabilities
+        cash /
+        current_liabilities
     )
 
 else:
@@ -522,11 +553,13 @@ else:
 if total_assets > 0:
 
     debt_ratio = (
-        total_liabilities / total_assets
+        total_liabilities /
+        total_assets
     ) * 100
 
     equity_ratio = (
-        equity / total_assets
+        equity /
+        total_assets
     ) * 100
 
 else:
@@ -538,7 +571,8 @@ else:
 if equity > 0:
 
     debt_to_equity = (
-        total_liabilities / equity
+        total_liabilities /
+        equity
     )
 
 else:
@@ -549,7 +583,8 @@ else:
 if interest_expense > 0:
 
     interest_coverage = (
-        operating_profit / interest_expense
+        operating_profit /
+        interest_expense
     )
 
 else:
@@ -564,7 +599,8 @@ else:
 if total_assets > 0:
 
     asset_turnover = (
-        revenue / total_assets
+        revenue /
+        total_assets
     )
 
 else:
@@ -575,11 +611,13 @@ else:
 if accounts_receivable > 0:
 
     receivables_turnover = (
-        revenue / accounts_receivable
+        revenue /
+        accounts_receivable
     )
 
     dso = (
-        accounts_receivable / revenue
+        accounts_receivable /
+        revenue
     ) * 365
 
 else:
@@ -591,7 +629,8 @@ else:
 if inventory > 0:
 
     inventory_turnover = (
-        cogs / inventory
+        cogs /
+        inventory
     )
 
 else:
@@ -605,7 +644,9 @@ else:
 
 st.divider()
 
-st.header("📊 Financial Dashboard")
+st.header(
+    "📊 Financial Dashboard"
+)
 
 
 # =========================================================
@@ -647,7 +688,9 @@ with k4:
 # PROFITABILITY
 # =========================================================
 
-st.subheader("📈 Profitability Ratios")
+st.subheader(
+    "📈 Profitability Ratios"
+)
 
 p1, p2, p3, p4, p5 = st.columns(5)
 
@@ -686,33 +729,31 @@ with p5:
 # LIQUIDITY
 # =========================================================
 
-st.subheader("💧 Liquidity Ratios")
+st.subheader(
+    "💧 Liquidity Ratios"
+)
 
 l1, l2, l3, l4 = st.columns(4)
 
 with l1:
-
     st.metric(
         "Current Ratio",
         f"{current_ratio:.2f}"
     )
 
 with l2:
-
     st.metric(
         "Quick Ratio",
         f"{quick_ratio:.2f}"
     )
 
 with l3:
-
     st.metric(
         "Cash Ratio",
         f"{cash_ratio:.2f}"
     )
 
 with l4:
-
     st.metric(
         "Working Capital",
         f"{working_capital:,.0f}"
@@ -723,33 +764,31 @@ with l4:
 # SOLVENCY
 # =========================================================
 
-st.subheader("🏦 Solvency Ratios")
+st.subheader(
+    "🏦 Solvency Ratios"
+)
 
 s1, s2, s3, s4 = st.columns(4)
 
 with s1:
-
     st.metric(
         "Debt Ratio",
         f"{debt_ratio:.2f}%"
     )
 
 with s2:
-
     st.metric(
         "Debt-to-Equity",
         f"{debt_to_equity:.2f}"
     )
 
 with s3:
-
     st.metric(
         "Equity Ratio",
         f"{equity_ratio:.2f}%"
     )
 
 with s4:
-
     st.metric(
         "Interest Coverage",
         f"{interest_coverage:.2f}x"
@@ -760,33 +799,31 @@ with s4:
 # EFFICIENCY
 # =========================================================
 
-st.subheader("⚙️ Efficiency Ratios")
+st.subheader(
+    "⚙️ Efficiency Ratios"
+)
 
 e1, e2, e3, e4 = st.columns(4)
 
 with e1:
-
     st.metric(
         "Asset Turnover",
         f"{asset_turnover:.2f}x"
     )
 
 with e2:
-
     st.metric(
         "Receivables Turnover",
         f"{receivables_turnover:.2f}x"
     )
 
 with e3:
-
     st.metric(
         "DSO",
         f"{dso:.1f} days"
     )
 
 with e4:
-
     st.metric(
         "Inventory Turnover",
         f"{inventory_turnover:.2f}x"
@@ -799,7 +836,9 @@ with e4:
 
 st.divider()
 
-st.subheader("🧾 Profit Calculation")
+st.subheader(
+    "🧾 Profit Calculation"
+)
 
 profit_data = pd.DataFrame({
     "Metric": [
@@ -813,6 +852,7 @@ profit_data = pd.DataFrame({
         "Tax Expense",
         "Net Profit"
     ],
+
     "Amount": [
         revenue,
         cogs,
@@ -834,14 +874,23 @@ st.dataframe(
 
 
 # =========================================================
-# CHART 1 — PROFIT BREAKDOWN
+# CHARTS
 # =========================================================
 
 st.divider()
 
-st.header("📊 Financial Charts")
+st.header(
+    "📊 Financial Charts"
+)
 
-st.subheader("💰 Profit Breakdown")
+
+# =========================================================
+# CHART 1 — PROFIT BREAKDOWN
+# =========================================================
+
+st.subheader(
+    "💰 Profit Breakdown"
+)
 
 profit_chart_data = pd.DataFrame({
     "Metric": [
@@ -850,6 +899,7 @@ profit_chart_data = pd.DataFrame({
         "Operating Profit",
         "Net Profit"
     ],
+
     "Amount": [
         revenue,
         gross_profit,
@@ -887,7 +937,9 @@ st.plotly_chart(
 # CHART 2 — EXPENSE STRUCTURE
 # =========================================================
 
-st.subheader("💸 Expense Structure")
+st.subheader(
+    "💸 Expense Structure"
+)
 
 expense_chart_data = pd.DataFrame({
     "Expense": [
@@ -896,6 +948,7 @@ expense_chart_data = pd.DataFrame({
         "Interest Expense",
         "Tax Expense"
     ],
+
     "Amount": [
         cogs,
         operating_expenses,
@@ -922,7 +975,9 @@ st.plotly_chart(
 # CHART 3 — FINANCIAL POSITION
 # =========================================================
 
-st.subheader("🏦 Financial Position")
+st.subheader(
+    "🏦 Financial Position"
+)
 
 position_chart_data = pd.DataFrame({
     "Category": [
@@ -930,6 +985,7 @@ position_chart_data = pd.DataFrame({
         "Total Liabilities",
         "Equity"
     ],
+
     "Amount": [
         total_assets,
         total_liabilities,
@@ -952,68 +1008,4 @@ fig_position.update_traces(
 
 fig_position.update_layout(
     xaxis_title="",
-    yaxis_title="Amount",
-    showlegend=False
-)
-
-st.plotly_chart(
-    fig_position,
-    use_container_width=True
-)
-
-
-# =========================================================
-# CHART 4 — RATIO OVERVIEW
-# =========================================================
-
-st.subheader("📈 Key Ratio Overview")
-
-ratio_chart_data = pd.DataFrame({
-    "Ratio": [
-        "Current Ratio",
-        "Quick Ratio",
-        "Cash Ratio",
-        "Debt-to-Equity"
-    ],
-    "Value": [
-        current_ratio,
-        quick_ratio,
-        cash_ratio,
-        debt_to_equity
-    ]
-})
-
-fig_ratio = px.bar(
-    ratio_chart_data,
-    x="Ratio",
-    y="Value",
-    title="Liquidity & Leverage Ratios",
-    text="Value"
-)
-
-fig_ratio.update_traces(
-    texttemplate="%{text:.2f}",
-    textposition="outside"
-)
-
-fig_ratio.update_layout(
-    xaxis_title="",
-    yaxis_title="Ratio",
-    showlegend=False
-)
-
-st.plotly_chart(
-    fig_ratio,
-    use_container_width=True
-)
-
-
-# =========================================================
-# FOOTER
-# =========================================================
-
-st.divider()
-
-st.caption(
-    "Fariha CFO • Financial analysis and decision-support tool"
-)
+    yaxis_title
