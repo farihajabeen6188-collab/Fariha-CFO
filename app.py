@@ -1,245 +1,291 @@
 import streamlit as st
 import pandas as pd
 
+# ==========================================
+# PAGE CONFIGURATION
+# ==========================================
+
 st.set_page_config(
     page_title="Fariha CFO",
     page_icon="💰",
     layout="wide"
 )
 
+# ==========================================
+# HEADER
+# ==========================================
+
 st.title("💰 Fariha CFO")
 st.subheader("Your AI-Powered Financial Manager")
 
 st.write(
-    "Upload your financial data or enter it manually "
-    "to start analyzing your business."
+    "Enter your financial information and Fariha CFO "
+    "will calculate key financial ratios automatically."
 )
 
 st.divider()
 
 # ==========================================
-# DATA INPUT OPTIONS
+# FINANCIAL DATA INPUT
 # ==========================================
 
-st.header("📊 Financial Data Input")
+st.header("📊 Financial Data")
 
-input_method = st.radio(
-    "How would you like to enter your financial data?",
-    [
-        "📂 Upload Excel / CSV",
-        "✍️ Enter Manually"
-    ],
-    horizontal=True
+col1, col2 = st.columns(2)
+
+with col1:
+
+    st.markdown("### 💰 Income Statement")
+
+    revenue = st.number_input(
+        "Revenue",
+        min_value=0.0,
+        value=1000000.0
+    )
+
+    cogs = st.number_input(
+        "Cost of Goods Sold (COGS)",
+        min_value=0.0,
+        value=600000.0
+    )
+
+    operating_expenses = st.number_input(
+        "Operating Expenses",
+        min_value=0.0,
+        value=200000.0
+    )
+
+    interest_expense = st.number_input(
+        "Interest Expense",
+        min_value=0.0,
+        value=20000.0
+    )
+
+    tax_expense = st.number_input(
+        "Tax Expense",
+        min_value=0.0,
+        value=36000.0
+    )
+
+with col2:
+
+    st.markdown("### 🏦 Balance Sheet")
+
+    cash = st.number_input(
+        "Cash & Cash Equivalents",
+        min_value=0.0,
+        value=100000.0
+    )
+
+    accounts_receivable = st.number_input(
+        "Accounts Receivable",
+        min_value=0.0,
+        value=150000.0
+    )
+
+    inventory = st.number_input(
+        "Inventory",
+        min_value=0.0,
+        value=200000.0
+    )
+
+    current_assets = st.number_input(
+        "Current Assets",
+        min_value=0.0,
+        value=500000.0
+    )
+
+    total_assets = st.number_input(
+        "Total Assets",
+        min_value=0.0,
+        value=1000000.0
+    )
+
+    current_liabilities = st.number_input(
+        "Current Liabilities",
+        min_value=0.0,
+        value=300000.0
+    )
+
+    total_liabilities = st.number_input(
+        "Total Liabilities",
+        min_value=0.0,
+        value=500000.0
+    )
+
+    equity = st.number_input(
+        "Shareholders' Equity",
+        min_value=0.0,
+        value=500000.0
+    )
+
+st.divider()
+
+# ==========================================
+# CALCULATIONS
+# ==========================================
+
+gross_profit = revenue - cogs
+
+operating_profit = (
+    gross_profit - operating_expenses
+)
+
+profit_before_tax = (
+    operating_profit - interest_expense
+)
+
+net_profit = (
+    profit_before_tax - tax_expense
+)
+
+working_capital = (
+    current_assets - current_liabilities
 )
 
 # ==========================================
-# EXCEL / CSV UPLOAD
+# PROFITABILITY RATIOS
 # ==========================================
 
-if input_method == "📂 Upload Excel / CSV":
+if revenue > 0:
 
-    st.subheader("📂 Upload Financial File")
+    gross_profit_margin = (
+        gross_profit / revenue
+    ) * 100
 
-    uploaded_file = st.file_uploader(
-        "Choose an Excel or CSV file",
-        type=["xlsx", "xls", "csv"]
-    )
+    operating_profit_margin = (
+        operating_profit / revenue
+    ) * 100
 
-    if uploaded_file is not None:
-
-        try:
-
-            if uploaded_file.name.endswith(".csv"):
-                df = pd.read_csv(uploaded_file)
-
-            else:
-                df = pd.read_excel(uploaded_file)
-
-            st.success("✅ File uploaded successfully!")
-
-            st.subheader("📋 Your Financial Data")
-
-            st.dataframe(
-                df,
-                use_container_width=True
-            )
-
-            st.info(
-                f"Your file contains {df.shape[0]} rows "
-                f"and {df.shape[1]} columns."
-            )
-
-        except Exception as e:
-
-            st.error(
-                f"Unable to read this file. Error: {e}"
-            )
-
-    else:
-
-        st.info(
-            "👆 Upload an Excel or CSV file to get started."
-        )
-
-
-# ==========================================
-# MANUAL DATA ENTRY
-# ==========================================
+    net_profit_margin = (
+        net_profit / revenue
+    ) * 100
 
 else:
 
-    st.subheader("✍️ Enter Financial Data")
+    gross_profit_margin = 0
+    operating_profit_margin = 0
+    net_profit_margin = 0
 
-    st.write(
-        "Enter your latest financial figures below."
+
+if total_assets > 0:
+
+    roa = (
+        net_profit / total_assets
+    ) * 100
+
+else:
+
+    roa = 0
+
+
+if equity > 0:
+
+    roe = (
+        net_profit / equity
+    ) * 100
+
+else:
+
+    roe = 0
+
+
+# ==========================================
+# LIQUIDITY RATIOS
+# ==========================================
+
+if current_liabilities > 0:
+
+    current_ratio = (
+        current_assets / current_liabilities
     )
 
-    col1, col2 = st.columns(2)
+    quick_ratio = (
+        current_assets - inventory
+    ) / current_liabilities
 
-    with col1:
+    cash_ratio = (
+        cash / current_liabilities
+    )
 
-        st.markdown("### 💰 Income Statement")
+else:
 
-        revenue = st.number_input(
-            "Revenue",
-            min_value=0.0,
-            value=0.0
-        )
+    current_ratio = 0
+    quick_ratio = 0
+    cash_ratio = 0
 
-        cogs = st.number_input(
-            "Cost of Goods Sold (COGS)",
-            min_value=0.0,
-            value=0.0
-        )
 
-        operating_expenses = st.number_input(
-            "Operating Expenses",
-            min_value=0.0,
-            value=0.0
-        )
+# ==========================================
+# SOLVENCY RATIOS
+# ==========================================
 
-        interest_expense = st.number_input(
-            "Interest Expense",
-            min_value=0.0,
-            value=0.0
-        )
+if total_assets > 0:
 
-        tax_expense = st.number_input(
-            "Tax Expense",
-            min_value=0.0,
-            value=0.0
-        )
+    debt_ratio = (
+        total_liabilities / total_assets
+    ) * 100
 
-    with col2:
+    equity_ratio = (
+        equity / total_assets
+    ) * 100
 
-        st.markdown("### 🏦 Balance Sheet")
+else:
 
-        cash = st.number_input(
-            "Cash & Cash Equivalents",
-            min_value=0.0,
-            value=0.0
-        )
+    debt_ratio = 0
+    equity_ratio = 0
 
-        accounts_receivable = st.number_input(
-            "Accounts Receivable",
-            min_value=0.0,
-            value=0.0
-        )
 
-        inventory = st.number_input(
-            "Inventory",
-            min_value=0.0,
-            value=0.0
-        )
+if equity > 0:
 
-        current_assets = st.number_input(
-            "Current Assets",
-            min_value=0.0,
-            value=0.0
-        )
+    debt_to_equity = (
+        total_liabilities / equity
+    )
 
-        total_assets = st.number_input(
-            "Total Assets",
-            min_value=0.0,
-            value=0.0
-        )
+else:
 
-        current_liabilities = st.number_input(
-            "Current Liabilities",
-            min_value=0.0,
-            value=0.0
-        )
+    debt_to_equity = 0
 
-        total_liabilities = st.number_input(
-            "Total Liabilities",
-            min_value=0.0,
-            value=0.0
-        )
 
-        equity = st.number_input(
-            "Shareholders' Equity",
-            min_value=0.0,
-            value=0.0
-        )
+if interest_expense > 0:
 
-    st.divider()
+    interest_coverage = (
+        operating_profit / interest_expense
+    )
 
-    if st.button("💾 Save Financial Data"):
+else:
 
-        gross_profit = revenue - cogs
+    interest_coverage = 0
 
-        operating_profit = (
-            gross_profit - operating_expenses
-        )
 
-        profit_before_tax = (
-            operating_profit - interest_expense
-        )
+# ==========================================
+# EFFICIENCY RATIOS
+# ==========================================
 
-        net_profit = (
-            profit_before_tax - tax_expense
-        )
+if total_assets > 0:
 
-        st.success(
-            "✅ Financial data recorded successfully!"
-        )
+    asset_turnover = (
+        revenue / total_assets
+    )
 
-        st.subheader("📋 Financial Summary")
+else:
 
-        summary_col1, summary_col2, summary_col3 = st.columns(3)
+    asset_turnover = 0
 
-        with summary_col1:
 
-            st.metric(
-                "Revenue",
-                f"{revenue:,.0f}"
-            )
+if accounts_receivable > 0:
 
-            st.metric(
-                "Gross Profit",
-                f"{gross_profit:,.0f}"
-            )
+    receivables_turnover = (
+        revenue / accounts_receivable
+    )
 
-        with summary_col2:
+    dso = (
+        accounts_receivable / revenue
+    ) * 365
 
-            st.metric(
-                "Operating Profit",
-                f"{operating_profit:,.0f}"
-            )
+else:
 
-            st.metric(
-                "Profit Before Tax",
-                f"{profit_before_tax:,.0f}"
-            )
+    receivables_turnover = 0
+    dso = 0
 
-        with summary_col3:
 
-            st.metric(
-                "Net Profit",
-                f"{net_profit:,.0f}"
-            )
-
-            st.metric(
-                "Total Assets",
-                f"{total_assets:,.0f}"
-            )
+if inventory > 
