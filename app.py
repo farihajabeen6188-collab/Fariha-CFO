@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# ==========================================
-# PAGE CONFIGURATION
-# ==========================================
+# =========================================================
+# PAGE CONFIG
+# =========================================================
 
 st.set_page_config(
     page_title="Fariha CFO",
@@ -12,119 +12,222 @@ st.set_page_config(
     layout="wide"
 )
 
-# ==========================================
+# =========================================================
 # HEADER
-# ==========================================
+# =========================================================
 
 st.title("💰 Fariha CFO")
 st.subheader("Your AI-Powered Financial Manager")
 
 st.write(
-    "Enter your financial information and Fariha CFO "
-    "will calculate key financial ratios automatically."
+    "Upload your financial data or enter it manually "
+    "to analyze your business performance."
 )
 
 st.divider()
 
-# ==========================================
-# FINANCIAL DATA INPUT
-# ==========================================
+# =========================================================
+# DATA INPUT
+# =========================================================
 
-st.header("📊 Financial Data")
+st.header("📊 Financial Data Input")
 
-col1, col2 = st.columns(2)
+input_method = st.radio(
+    "Choose how you want to provide your financial data:",
+    [
+        "📂 Upload Excel / CSV",
+        "✍️ Enter Manually"
+    ],
+    horizontal=True
+)
 
-with col1:
+# =========================================================
+# DEFAULT VALUES
+# =========================================================
 
-    st.markdown("### 💰 Income Statement")
+revenue = 0.0
+cogs = 0.0
+operating_expenses = 0.0
+interest_expense = 0.0
+tax_expense = 0.0
 
-    revenue = st.number_input(
-        "Revenue",
-        min_value=0.0,
-        value=1000000.0
+cash = 0.0
+accounts_receivable = 0.0
+inventory = 0.0
+current_assets = 0.0
+total_assets = 0.0
+current_liabilities = 0.0
+total_liabilities = 0.0
+equity = 0.0
+
+# =========================================================
+# OPTION 1 — EXCEL / CSV
+# =========================================================
+
+if input_method == "📂 Upload Excel / CSV":
+
+    st.subheader("📂 Upload Financial File")
+
+    uploaded_file = st.file_uploader(
+        "Choose your Excel or CSV file",
+        type=["xlsx", "xls", "csv"]
     )
 
-    cogs = st.number_input(
-        "Cost of Goods Sold (COGS)",
-        min_value=0.0,
-        value=600000.0
+    if uploaded_file is not None:
+
+        try:
+
+            if uploaded_file.name.endswith(".csv"):
+                uploaded_df = pd.read_csv(uploaded_file)
+
+            else:
+                uploaded_df = pd.read_excel(uploaded_file)
+
+            st.success("✅ File uploaded successfully!")
+
+            st.subheader("📋 Uploaded Data")
+
+            st.dataframe(
+                uploaded_df,
+                use_container_width=True
+            )
+
+            st.info(
+                f"Your file contains {uploaded_df.shape[0]} rows "
+                f"and {uploaded_df.shape[1]} columns."
+            )
+
+            st.warning(
+                "Automatic financial-statement mapping will be "
+                "added in the next stage. For now, the uploaded "
+                "data is being successfully read by Fariha CFO."
+            )
+
+        except Exception as e:
+
+            st.error(
+                f"Unable to read this file: {e}"
+            )
+
+    else:
+
+        st.info(
+            "👆 Upload an Excel or CSV file to get started."
+        )
+
+
+# =========================================================
+# OPTION 2 — MANUAL ENTRY
+# =========================================================
+
+else:
+
+    st.subheader("✍️ Enter Financial Data")
+
+    st.write(
+        "Enter your latest financial figures below."
     )
 
-    operating_expenses = st.number_input(
-        "Operating Expenses",
-        min_value=0.0,
-        value=200000.0
-    )
+    col1, col2 = st.columns(2)
 
-    interest_expense = st.number_input(
-        "Interest Expense",
-        min_value=0.0,
-        value=20000.0
-    )
+    # -----------------------------------------------------
+    # INCOME STATEMENT
+    # -----------------------------------------------------
 
-    tax_expense = st.number_input(
-        "Tax Expense",
-        min_value=0.0,
-        value=36000.0
-    )
+    with col1:
 
-with col2:
+        st.markdown("### 💰 Income Statement")
 
-    st.markdown("### 🏦 Balance Sheet")
+        revenue = st.number_input(
+            "Revenue",
+            min_value=0.0,
+            value=1000000.0
+        )
 
-    cash = st.number_input(
-        "Cash & Cash Equivalents",
-        min_value=0.0,
-        value=100000.0
-    )
+        cogs = st.number_input(
+            "Cost of Goods Sold (COGS)",
+            min_value=0.0,
+            value=600000.0
+        )
 
-    accounts_receivable = st.number_input(
-        "Accounts Receivable",
-        min_value=0.0,
-        value=150000.0
-    )
+        operating_expenses = st.number_input(
+            "Operating Expenses",
+            min_value=0.0,
+            value=200000.0
+        )
 
-    inventory = st.number_input(
-        "Inventory",
-        min_value=0.0,
-        value=200000.0
-    )
+        interest_expense = st.number_input(
+            "Interest Expense",
+            min_value=0.0,
+            value=20000.0
+        )
 
-    current_assets = st.number_input(
-        "Current Assets",
-        min_value=0.0,
-        value=500000.0
-    )
+        tax_expense = st.number_input(
+            "Tax Expense",
+            min_value=0.0,
+            value=36000.0
+        )
 
-    total_assets = st.number_input(
-        "Total Assets",
-        min_value=0.0,
-        value=1000000.0
-    )
+    # -----------------------------------------------------
+    # BALANCE SHEET
+    # -----------------------------------------------------
 
-    current_liabilities = st.number_input(
-        "Current Liabilities",
-        min_value=0.0,
-        value=300000.0
-    )
+    with col2:
 
-    total_liabilities = st.number_input(
-        "Total Liabilities",
-        min_value=0.0,
-        value=500000.0
-    )
+        st.markdown("### 🏦 Balance Sheet")
 
-    equity = st.number_input(
-        "Shareholders' Equity",
-        min_value=0.0,
-        value=500000.0
-    )
+        cash = st.number_input(
+            "Cash & Cash Equivalents",
+            min_value=0.0,
+            value=100000.0
+        )
 
-st.divider()
+        accounts_receivable = st.number_input(
+            "Accounts Receivable",
+            min_value=0.0,
+            value=150000.0
+        )
 
-# ==========================================
-# CALCULATIONS
-# ==========================================
+        inventory = st.number_input(
+            "Inventory",
+            min_value=0.0,
+            value=200000.0
+        )
+
+        current_assets = st.number_input(
+            "Current Assets",
+            min_value=0.0,
+            value=500000.0
+        )
+
+        total_assets = st.number_input(
+            "Total Assets",
+            min_value=0.0,
+            value=1000000.0
+        )
+
+        current_liabilities = st.number_input(
+            "Current Liabilities",
+            min_value=0.0,
+            value=300000.0
+        )
+
+        total_liabilities = st.number_input(
+            "Total Liabilities",
+            min_value=0.0,
+            value=500000.0
+        )
+
+        equity = st.number_input(
+            "Shareholders' Equity",
+            min_value=0.0,
+            value=500000.0
+        )
+
+
+# =========================================================
+# FINANCIAL CALCULATIONS
+# =========================================================
 
 gross_profit = revenue - cogs
 
@@ -144,9 +247,10 @@ working_capital = (
     current_assets - current_liabilities
 )
 
-# ==========================================
+
+# =========================================================
 # PROFITABILITY RATIOS
-# ==========================================
+# =========================================================
 
 if revenue > 0:
 
@@ -191,9 +295,9 @@ else:
     roe = 0
 
 
-# ==========================================
+# =========================================================
 # LIQUIDITY RATIOS
-# ==========================================
+# =========================================================
 
 if current_liabilities > 0:
 
@@ -216,9 +320,9 @@ else:
     cash_ratio = 0
 
 
-# ==========================================
+# =========================================================
 # SOLVENCY RATIOS
-# ==========================================
+# =========================================================
 
 if total_assets > 0:
 
@@ -258,9 +362,9 @@ else:
     interest_coverage = 0
 
 
-# ==========================================
+# =========================================================
 # EFFICIENCY RATIOS
-# ==========================================
+# =========================================================
 
 if total_assets > 0:
 
@@ -300,36 +404,43 @@ else:
     inventory_turnover = 0
 
 
-# ==========================================
-# FINANCIAL SUMMARY
-# ==========================================
+# =========================================================
+# DASHBOARD
+# =========================================================
 
-st.header("💰 Financial Summary")
+st.divider()
 
-summary1, summary2, summary3, summary4 = st.columns(4)
+st.header("📊 Financial Dashboard")
 
-with summary1:
+
+# =========================================================
+# KPI CARDS
+# =========================================================
+
+k1, k2, k3, k4 = st.columns(4)
+
+with k1:
 
     st.metric(
         "Revenue",
         f"{revenue:,.0f}"
     )
 
-with summary2:
+with k2:
 
     st.metric(
         "Gross Profit",
         f"{gross_profit:,.0f}"
     )
 
-with summary3:
+with k3:
 
     st.metric(
         "Operating Profit",
         f"{operating_profit:,.0f}"
     )
 
-with summary4:
+with k4:
 
     st.metric(
         "Net Profit",
@@ -337,13 +448,11 @@ with summary4:
     )
 
 
-# ==========================================
+# =========================================================
 # PROFITABILITY
-# ==========================================
+# =========================================================
 
-st.divider()
-
-st.header("📈 Profitability Ratios")
+st.subheader("📈 Profitability Ratios")
 
 p1, p2, p3, p4, p5 = st.columns(5)
 
@@ -378,11 +487,11 @@ with p5:
     )
 
 
-# ==========================================
+# =========================================================
 # LIQUIDITY
-# ==========================================
+# =========================================================
 
-st.header("💧 Liquidity Ratios")
+st.subheader("💧 Liquidity Ratios")
 
 l1, l2, l3, l4 = st.columns(4)
 
@@ -415,11 +524,11 @@ with l4:
     )
 
 
-# ==========================================
+# =========================================================
 # SOLVENCY
-# ==========================================
+# =========================================================
 
-st.header("🏦 Solvency Ratios")
+st.subheader("🏦 Solvency Ratios")
 
 s1, s2, s3, s4 = st.columns(4)
 
@@ -452,11 +561,11 @@ with s4:
     )
 
 
-# ==========================================
+# =========================================================
 # EFFICIENCY
-# ==========================================
+# =========================================================
 
-st.header("⚙️ Efficiency Ratios")
+st.subheader("⚙️ Efficiency Ratios")
 
 e1, e2, e3, e4 = st.columns(4)
 
@@ -489,13 +598,13 @@ with e4:
     )
 
 
-# ==========================================
-# BASIC PROFIT CALCULATION
-# ==========================================
+# =========================================================
+# PROFIT TABLE
+# =========================================================
 
 st.divider()
 
-st.header("🧾 Profit Calculation")
+st.subheader("🧾 Profit Calculation")
 
 profit_data = pd.DataFrame({
     "Metric": [
@@ -509,7 +618,6 @@ profit_data = pd.DataFrame({
         "Tax Expense",
         "Net Profit"
     ],
-
     "Amount": [
         revenue,
         cogs,
@@ -528,17 +636,15 @@ st.dataframe(
     use_container_width=True,
     hide_index=True
 )
-# ==========================================
-# FINANCIAL CHARTS
-# ==========================================
+
+
+# =========================================================
+# CHART 1 — PROFIT BREAKDOWN
+# =========================================================
 
 st.divider()
 
 st.header("📊 Financial Charts")
-
-# ==========================================
-# CHART 1 — PROFIT BREAKDOWN
-# ==========================================
 
 st.subheader("💰 Profit Breakdown")
 
@@ -582,9 +688,9 @@ st.plotly_chart(
 )
 
 
-# ==========================================
+# =========================================================
 # CHART 2 — EXPENSE STRUCTURE
-# ==========================================
+# =========================================================
 
 st.subheader("💸 Expense Structure")
 
@@ -617,9 +723,9 @@ st.plotly_chart(
 )
 
 
-# ==========================================
-# CHART 3 — ASSETS VS LIABILITIES VS EQUITY
-# ==========================================
+# =========================================================
+# CHART 3 — FINANCIAL POSITION
+# =========================================================
 
 st.subheader("🏦 Financial Position")
 
@@ -661,9 +767,9 @@ st.plotly_chart(
 )
 
 
-# ==========================================
+# =========================================================
 # CHART 4 — RATIO OVERVIEW
-# ==========================================
+# =========================================================
 
 st.subheader("📈 Key Ratio Overview")
 
@@ -704,4 +810,15 @@ fig_ratio.update_layout(
 st.plotly_chart(
     fig_ratio,
     use_container_width=True
+)
+
+
+# =========================================================
+# FOOTER
+# =========================================================
+
+st.divider()
+
+st.caption(
+    "Fariha CFO • Financial analysis and decision-support tool"
 )
