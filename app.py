@@ -288,4 +288,242 @@ else:
     dso = 0
 
 
-if inventory > 
+if inventory > 0:
+
+    inventory_turnover = (
+        cogs / inventory
+    )
+
+else:
+
+    inventory_turnover = 0
+
+
+# ==========================================
+# FINANCIAL SUMMARY
+# ==========================================
+
+st.header("💰 Financial Summary")
+
+summary1, summary2, summary3, summary4 = st.columns(4)
+
+with summary1:
+
+    st.metric(
+        "Revenue",
+        f"{revenue:,.0f}"
+    )
+
+with summary2:
+
+    st.metric(
+        "Gross Profit",
+        f"{gross_profit:,.0f}"
+    )
+
+with summary3:
+
+    st.metric(
+        "Operating Profit",
+        f"{operating_profit:,.0f}"
+    )
+
+with summary4:
+
+    st.metric(
+        "Net Profit",
+        f"{net_profit:,.0f}"
+    )
+
+
+# ==========================================
+# PROFITABILITY
+# ==========================================
+
+st.divider()
+
+st.header("📈 Profitability Ratios")
+
+p1, p2, p3, p4, p5 = st.columns(5)
+
+with p1:
+    st.metric(
+        "Gross Margin",
+        f"{gross_profit_margin:.2f}%"
+    )
+
+with p2:
+    st.metric(
+        "Operating Margin",
+        f"{operating_profit_margin:.2f}%"
+    )
+
+with p3:
+    st.metric(
+        "Net Margin",
+        f"{net_profit_margin:.2f}%"
+    )
+
+with p4:
+    st.metric(
+        "ROA",
+        f"{roa:.2f}%"
+    )
+
+with p5:
+    st.metric(
+        "ROE",
+        f"{roe:.2f}%"
+    )
+
+
+# ==========================================
+# LIQUIDITY
+# ==========================================
+
+st.header("💧 Liquidity Ratios")
+
+l1, l2, l3, l4 = st.columns(4)
+
+with l1:
+
+    st.metric(
+        "Current Ratio",
+        f"{current_ratio:.2f}"
+    )
+
+with l2:
+
+    st.metric(
+        "Quick Ratio",
+        f"{quick_ratio:.2f}"
+    )
+
+with l3:
+
+    st.metric(
+        "Cash Ratio",
+        f"{cash_ratio:.2f}"
+    )
+
+with l4:
+
+    st.metric(
+        "Working Capital",
+        f"{working_capital:,.0f}"
+    )
+
+
+# ==========================================
+# SOLVENCY
+# ==========================================
+
+st.header("🏦 Solvency Ratios")
+
+s1, s2, s3, s4 = st.columns(4)
+
+with s1:
+
+    st.metric(
+        "Debt Ratio",
+        f"{debt_ratio:.2f}%"
+    )
+
+with s2:
+
+    st.metric(
+        "Debt-to-Equity",
+        f"{debt_to_equity:.2f}"
+    )
+
+with s3:
+
+    st.metric(
+        "Equity Ratio",
+        f"{equity_ratio:.2f}%"
+    )
+
+with s4:
+
+    st.metric(
+        "Interest Coverage",
+        f"{interest_coverage:.2f}x"
+    )
+
+
+# ==========================================
+# EFFICIENCY
+# ==========================================
+
+st.header("⚙️ Efficiency Ratios")
+
+e1, e2, e3, e4 = st.columns(4)
+
+with e1:
+
+    st.metric(
+        "Asset Turnover",
+        f"{asset_turnover:.2f}x"
+    )
+
+with e2:
+
+    st.metric(
+        "Receivables Turnover",
+        f"{receivables_turnover:.2f}x"
+    )
+
+with e3:
+
+    st.metric(
+        "DSO",
+        f"{dso:.1f} days"
+    )
+
+with e4:
+
+    st.metric(
+        "Inventory Turnover",
+        f"{inventory_turnover:.2f}x"
+    )
+
+
+# ==========================================
+# BASIC PROFIT CALCULATION
+# ==========================================
+
+st.divider()
+
+st.header("🧾 Profit Calculation")
+
+profit_data = pd.DataFrame({
+    "Metric": [
+        "Revenue",
+        "COGS",
+        "Gross Profit",
+        "Operating Expenses",
+        "Operating Profit",
+        "Interest Expense",
+        "Profit Before Tax",
+        "Tax Expense",
+        "Net Profit"
+    ],
+
+    "Amount": [
+        revenue,
+        cogs,
+        gross_profit,
+        operating_expenses,
+        operating_profit,
+        interest_expense,
+        profit_before_tax,
+        tax_expense,
+        net_profit
+    ]
+})
+
+st.dataframe(
+    profit_data,
+    use_container_width=True,
+    hide_index=True
+)
