@@ -821,3 +821,4 @@ st.divider()
 
 st.caption(
     "Fariha CFO • Financial analysis and decision-support tool"
+)
