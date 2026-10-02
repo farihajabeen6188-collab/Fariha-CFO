@@ -994,18 +994,18 @@ position_chart_data = pd.DataFrame({
 })
 
 fig_position = px.bar(
-    position_chart_data,
-    x="Category",
-    y="Amount",
-    title="Assets vs Liabilities vs Equity",
-    text="Amount"
-)
-
-fig_position.update_traces(
-    texttemplate="%{text:,.0f}",
-    textposition="outside"
+    x=["Total Assets", "Total Liabilities", "Equity"],
+    y=[total_assets, total_liabilities, equity],
+    labels={"x": "Category", "y": "Amount"},
+    title="Assets vs Liabilities vs Equity"
 )
 
 fig_position.update_layout(
-    xaxis_title="",
-    yaxis_title
+    title="Assets vs Liabilities vs Equity",
+    xaxis_title="Category",
+    yaxis_title="Amount",
+    template="plotly_white",
+    height=450
+)
+
+st.plotly_chart(fig_position, use_container_width=True)
