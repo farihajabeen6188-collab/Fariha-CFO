@@ -1,88 +1,369 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import re
 
-# =========================================================
+# ============================================================
 # PAGE CONFIG
-# =========================================================
+# ============================================================
 
 st.set_page_config(
     page_title="Fariha CFO",
-    page_icon="💰",
+    page_icon="💼",
     layout="wide"
 )
 
-# =========================================================
-# SMART FINANCIAL DATA MAPPING
-# =========================================================
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
 
-def find_financial_value(df, possible_names):
+def clean_text(value):
+    """Clean text for easier matching."""
+    if pd.isna(value):
+        return ""
 
-    for column in df.columns:
+    value = str(value).strip().lower()
+    value = re.sub(r"\s+", " ", value)
 
-        clean_column = (
-            str(column)
-            .strip()
-            .lower()
-            .replace("_", " ")
-            .replace("-", " ")
+    return value
+
+
+def find_label_column(df):
+    """
+    Find the column most likely containing financial statement labels.
+    """
+
+    possible_names = [
+        "particulars",
+        "particular",
+        "description",
+        "account",
+        "account name",
+        "item",
+        "line item",
+        "statement item",
+        "name"
+    ]
+
+    for col in df.columns:
+        cleaned = clean_text(col)
+
+        if cleaned in possible_names:
+            return col
+
+    # Fallback:
+    # choose the column with the most text values
+    text_scores = {}
+
+    for col in df.columns:
+        non_empty = df[col].dropna()
+
+        if len(non_empty) == 0:
+            text_scores[col] = 0
+            continue
+
+        text_count = sum(
+            isinstance(x, str) and not str(x).replace(",", "").replace(".", "").isdigit()
+            for x in non_empty
         )
+
+        text_scores[col] = text_count
+
+    if text_scores:
+        return max(text_scores, key=text_scores.get)
+
+    return None
+
+
+def find_year_columns(df):
+    """
+    Detect columns containing years such as:
+    2021, 2022, 2023, 2024, 2025
+    """
+
+    year_columns = {}
+
+    for col in df.columns:
+
+        # Convert column name to string
+        col_text = str(col)
+
+        # Find 4 digit year
+        matches = re.findall(r"\b(20\d{2})\b", col_text)
+
+        if matches:
+            year = int(matches[-1])
+            year_columns[year] = col
+
+    return dict(sorted(year_columns.items()))
+
+
+def normalize_label(label):
+    """
+    Normalize financial statement labels.
+    """
+
+    label = clean_text(label)
+
+    label = label.replace("&", "and")
+    label = label.replace("-", " ")
+    label = label.replace("_", " ")
+
+    label = re.sub(r"\s+", " ", label)
+
+    return label.strip()
+
+
+def convert_to_number(value):
+    """
+    Convert financial values into numbers.
+
+    Handles:
+    1,500,000
+    1,500,000.00
+    (500,000)
+    $500,000
+    PKR 500,000
+    """
+
+    if pd.isna(value):
+        return None
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    value = str(value).strip()
+
+    if value == "":
+        return None
+
+    negative = False
+
+    # Handle brackets
+    if value.startswith("(") and value.endswith(")"):
+        negative = True
+
+    # Remove currency and commas
+    value = value.replace(",", "")
+    value = value.replace("$", "")
+    value = value.replace("PKR", "")
+    value = value.replace("Rs.", "")
+    value = value.replace("Rs", "")
+    value = value.replace("%", "")
+    value = value.replace("(", "")
+    value = value.replace(")", "")
+
+    try:
+        number = float(value)
+
+        if negative:
+            number = -number
+
+        return number
+
+    except:
+        return None
+
+
+# ============================================================
+# FINANCIAL LINE ITEM MAPPING
+# ============================================================
+
+FINANCIAL_LABELS = {
+
+    "revenue": [
+        "revenue",
+        "sales",
+        "net sales",
+        "sales revenue",
+        "turnover",
+        "net revenue",
+        "total revenue"
+    ],
+
+    "cogs": [
+        "cogs",
+        "cost of goods sold",
+        "cost of sales",
+        "cost of revenue",
+        "cost of goods"
+    ],
+
+    "operating_expenses": [
+        "operating expenses",
+        "operating expense",
+        "opex",
+        "operating costs",
+        "selling general and administrative expenses",
+        "selling general administrative expenses"
+    ],
+
+    "interest_expense": [
+        "interest expense",
+        "interest cost",
+        "finance cost",
+        "finance costs",
+        "financial charges"
+    ],
+
+    "tax_expense": [
+        "tax expense",
+        "income tax",
+        "income tax expense",
+        "taxation",
+        "tax"
+    ],
+
+    "cash": [
+        "cash",
+        "cash and cash equivalents",
+        "cash & cash equivalents",
+        "cash equivalents"
+    ],
+
+    "accounts_receivable": [
+        "accounts receivable",
+        "account receivable",
+        "trade receivables",
+        "trade receivable",
+        "receivables",
+        "debtor",
+        "debtors"
+    ],
+
+    "inventory": [
+        "inventory",
+        "inventories",
+        "stock"
+    ],
+
+    "current_assets": [
+        "current assets",
+        "total current assets"
+    ],
+
+    "total_assets": [
+        "total assets"
+    ],
+
+    "current_liabilities": [
+        "current liabilities",
+        "total current liabilities"
+    ],
+
+    "total_liabilities": [
+        "total liabilities"
+    ],
+
+    "equity": [
+        "equity",
+        "total equity",
+        "shareholders equity",
+        "shareholders' equity",
+        "stockholders equity",
+        "total shareholders equity"
+    ]
+}
+
+
+def match_financial_item(label):
+    """
+    Match a financial statement row to our standardized field.
+    """
+
+    label = normalize_label(label)
+
+    # Exact match first
+    for field, possible_names in FINANCIAL_LABELS.items():
 
         for name in possible_names:
 
-            if name in clean_column:
+            if label == normalize_label(name):
+                return field
 
-                series = pd.to_numeric(
-                    df[column],
-                    errors="coerce"
-                )
+    # Partial match second
+    for field, possible_names in FINANCIAL_LABELS.items():
 
-                if series.notna().any():
+        for name in possible_names:
 
-                    return float(
-                        series.dropna().iloc[-1]
-                    )
+            name = normalize_label(name)
 
-    return 0.0
+            if name in label or label in name:
+                return field
+
+    return None
 
 
-# =========================================================
+# ============================================================
+# EXTRACT FINANCIAL DATA
+# ============================================================
+
+def extract_financial_data(df):
+    """
+    Extract multi-year financial data from uploaded dataframe.
+    """
+
+    label_column = find_label_column(df)
+
+    year_columns = find_year_columns(df)
+
+    result = {}
+
+    if label_column is None:
+        return result, None, year_columns
+
+    for _, row in df.iterrows():
+
+        label = row[label_column]
+
+        field = match_financial_item(label)
+
+        if field is None:
+            continue
+
+        result[field] = {}
+
+        for year, column in year_columns.items():
+
+            value = convert_to_number(row[column])
+
+            if value is not None:
+                result[field][year] = value
+
+    return result, label_column, year_columns
+
+
+# ============================================================
 # HEADER
-# =========================================================
+# ============================================================
 
-st.title("💰 Fariha CFO")
+st.title("💼 Fariha CFO")
 
-st.subheader(
-    "Your AI-Powered Financial Manager"
-)
+st.subheader("Your Personal AI Financial Manager")
 
 st.write(
-    "Upload your financial data or enter it manually "
-    "to analyze your business performance."
+    "Upload your financial statements or enter your financial data manually. "
+    "Fariha CFO will calculate financial metrics, create visual dashboards, "
+    "and help you understand your numbers."
 )
 
 st.divider()
 
 
-# =========================================================
-# DATA INPUT
-# =========================================================
-
-st.header("📊 Financial Data Input")
+# ============================================================
+# INPUT METHOD
+# ============================================================
 
 input_method = st.radio(
     "Choose how you want to provide your financial data:",
-    [
-        "📂 Upload Excel / CSV",
-        "✍️ Enter Manually"
-    ],
+    ["Upload Excel / CSV", "Enter Manually"],
     horizontal=True
 )
 
 
-# =========================================================
+# ============================================================
 # DEFAULT VALUES
-# =========================================================
+# ============================================================
 
 revenue = 0.0
 cogs = 0.0
@@ -93,23 +374,29 @@ tax_expense = 0.0
 cash = 0.0
 accounts_receivable = 0.0
 inventory = 0.0
+
 current_assets = 0.0
 total_assets = 0.0
+
 current_liabilities = 0.0
 total_liabilities = 0.0
+
 equity = 0.0
 
+multi_year_data = {}
+selected_year = None
 
-# =========================================================
-# OPTION 1 — EXCEL / CSV UPLOAD
-# =========================================================
 
-if input_method == "📂 Upload Excel / CSV":
+# ============================================================
+# UPLOAD EXCEL / CSV
+# ============================================================
 
-    st.subheader("📂 Upload Financial File")
+if input_method == "Upload Excel / CSV":
+
+    st.subheader("📂 Upload Financial Statement")
 
     uploaded_file = st.file_uploader(
-        "Choose your Excel or CSV file",
+        "Upload Excel or CSV file",
         type=["xlsx", "xls", "csv"]
     )
 
@@ -117,541 +404,394 @@ if input_method == "📂 Upload Excel / CSV":
 
         try:
 
-            if uploaded_file.name.endswith(".csv"):
+            # Read file
+            if uploaded_file.name.lower().endswith(".csv"):
+                df = pd.read_csv(uploaded_file)
 
-                uploaded_df = pd.read_csv(
-                    uploaded_file
+            else:
+                df = pd.read_excel(uploaded_file)
+
+            st.success("Financial statement uploaded successfully! ✅")
+
+            # Show original data
+            st.subheader("📋 Uploaded Data")
+
+            st.dataframe(
+                df,
+                use_container_width=True
+            )
+
+            # Extract data
+            extracted_data, label_column, year_columns = extract_financial_data(df)
+
+            # ------------------------------------------------
+            # DETECTED STRUCTURE
+            # ------------------------------------------------
+
+            st.subheader("🔍 Statement Structure")
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric(
+                    "Rows",
+                    len(df)
+                )
+
+            with col2:
+                st.metric(
+                    "Columns",
+                    len(df.columns)
+                )
+
+            with col3:
+                st.metric(
+                    "Years Detected",
+                    len(year_columns)
+                )
+
+            if label_column:
+                st.info(
+                    f"Financial line-item column detected: **{label_column}**"
+                )
+
+            if year_columns:
+
+                detected_years = list(year_columns.keys())
+
+                st.success(
+                    f"Years detected: {', '.join(map(str, detected_years))}"
+                )
+
+                # Select year
+                selected_year = st.selectbox(
+                    "Select the year you want to analyze:",
+                    detected_years,
+                    index=len(detected_years) - 1
                 )
 
             else:
 
-                uploaded_df = pd.read_excel(
-                    uploaded_file
+                st.warning(
+                    "No year columns were detected. "
+                    "Please make sure your Excel columns contain years such as 2023, 2024 or 2025."
                 )
 
-            st.success(
-                "✅ File uploaded successfully!"
-            )
+            # ------------------------------------------------
+            # MULTI-YEAR DATA
+            # ------------------------------------------------
 
-            st.subheader("📋 Uploaded Data")
+            multi_year_data = extracted_data
 
-            st.dataframe(
-                uploaded_df,
-                use_container_width=True
-            )
+            # ------------------------------------------------
+            # DISPLAY DETECTED ITEMS
+            # ------------------------------------------------
 
-            st.info(
-                f"Your file contains "
-                f"{uploaded_df.shape[0]} rows and "
-                f"{uploaded_df.shape[1]} columns."
-            )
+            st.subheader("🧠 Fariha CFO Detected")
 
-            # =================================================
-            # AUTOMATIC FINANCIAL FIELD DETECTION
-            # =================================================
+            detected_rows = []
 
-            revenue = find_financial_value(
-                uploaded_df,
-                [
-                    "revenue",
-                    "sales",
-                    "net sales",
-                    "turnover"
-                ]
-            )
+            for field, yearly_values in extracted_data.items():
 
-            cogs = find_financial_value(
-                uploaded_df,
-                [
-                    "cogs",
-                    "cost of goods sold",
-                    "cost of sales",
-                    "cost of revenue"
-                ]
-            )
+                latest_value = None
 
-            operating_expenses = find_financial_value(
-                uploaded_df,
-                [
-                    "operating expenses",
-                    "operating expense",
-                    "opex"
-                ]
-            )
+                if selected_year in yearly_values:
+                    latest_value = yearly_values[selected_year]
 
-            interest_expense = find_financial_value(
-                uploaded_df,
-                [
-                    "interest expense",
-                    "interest cost",
-                    "finance cost"
-                ]
-            )
+                elif yearly_values:
+                    latest_value = list(yearly_values.values())[-1]
 
-            tax_expense = find_financial_value(
-                uploaded_df,
-                [
-                    "tax expense",
-                    "income tax",
-                    "tax"
-                ]
-            )
+                detected_rows.append({
+                    "Financial Item": field.replace("_", " ").title(),
+                    "Selected Year": selected_year,
+                    "Value": latest_value
+                })
 
-            cash = find_financial_value(
-                uploaded_df,
-                [
-                    "cash and cash equivalents",
-                    "cash & cash equivalents",
-                    "cash equivalents",
-                    "cash"
-                ]
-            )
+            if detected_rows:
 
-            accounts_receivable = find_financial_value(
-                uploaded_df,
-                [
-                    "accounts receivable",
-                    "account receivable",
-                    "trade receivables",
-                    "receivables"
-                ]
-            )
+                detected_df = pd.DataFrame(detected_rows)
 
-            inventory = find_financial_value(
-                uploaded_df,
-                [
-                    "inventory",
-                    "inventories",
-                    "stock"
-                ]
-            )
+                st.dataframe(
+                    detected_df,
+                    use_container_width=True
+                )
 
-            current_assets = find_financial_value(
-                uploaded_df,
-                [
-                    "current assets",
-                    "total current assets"
-                ]
-            )
+            else:
 
-            total_assets = find_financial_value(
-                uploaded_df,
-                [
-                    "total assets",
-                    "assets"
-                ]
-            )
+                st.warning(
+                    "No recognizable financial line items were found."
+                )
 
-            current_liabilities = find_financial_value(
-                uploaded_df,
-                [
-                    "current liabilities",
-                    "total current liabilities"
-                ]
-            )
+            # ------------------------------------------------
+            # ASSIGN SELECTED YEAR VALUES
+            # ------------------------------------------------
 
-            total_liabilities = find_financial_value(
-                uploaded_df,
-                [
-                    "total liabilities",
-                    "liabilities"
-                ]
-            )
+            if selected_year is not None:
 
-            equity = find_financial_value(
-                uploaded_df,
-                [
-                    "shareholders equity",
-                    "shareholders' equity",
-                    "stockholders equity",
-                    "total equity",
-                    "equity"
-                ]
-            )
+                revenue = extracted_data.get(
+                    "revenue", {}
+                ).get(selected_year, 0)
 
-            # =================================================
-            # DETECTED VALUES
-            # =================================================
+                cogs = extracted_data.get(
+                    "cogs", {}
+                ).get(selected_year, 0)
 
-            st.subheader(
-                "🔍 Financial Fields Detected"
-            )
+                operating_expenses = extracted_data.get(
+                    "operating_expenses", {}
+                ).get(selected_year, 0)
 
-            detected_data = pd.DataFrame({
-                "Financial Item": [
-                    "Revenue",
-                    "COGS",
-                    "Operating Expenses",
-                    "Interest Expense",
-                    "Tax Expense",
-                    "Cash",
-                    "Accounts Receivable",
-                    "Inventory",
-                    "Current Assets",
-                    "Total Assets",
-                    "Current Liabilities",
-                    "Total Liabilities",
-                    "Equity"
-                ],
+                interest_expense = extracted_data.get(
+                    "interest_expense", {}
+                ).get(selected_year, 0)
 
-                "Detected Value": [
-                    revenue,
-                    cogs,
-                    operating_expenses,
-                    interest_expense,
-                    tax_expense,
-                    cash,
-                    accounts_receivable,
-                    inventory,
-                    current_assets,
-                    total_assets,
-                    current_liabilities,
-                    total_liabilities,
-                    equity
-                ]
-            })
+                tax_expense = extracted_data.get(
+                    "tax_expense", {}
+                ).get(selected_year, 0)
 
-            st.dataframe(
-                detected_data,
-                use_container_width=True,
-                hide_index=True
-            )
+                cash = extracted_data.get(
+                    "cash", {}
+                ).get(selected_year, 0)
 
-            st.success(
-                "✅ Financial data has been mapped successfully."
-            )
+                accounts_receivable = extracted_data.get(
+                    "accounts_receivable", {}
+                ).get(selected_year, 0)
+
+                inventory = extracted_data.get(
+                    "inventory", {}
+                ).get(selected_year, 0)
+
+                current_assets = extracted_data.get(
+                    "current_assets", {}
+                ).get(selected_year, 0)
+
+                total_assets = extracted_data.get(
+                    "total_assets", {}
+                ).get(selected_year, 0)
+
+                current_liabilities = extracted_data.get(
+                    "current_liabilities", {}
+                ).get(selected_year, 0)
+
+                total_liabilities = extracted_data.get(
+                    "total_liabilities", {}
+                ).get(selected_year, 0)
+
+                equity = extracted_data.get(
+                    "equity", {}
+                ).get(selected_year, 0)
+
 
         except Exception as e:
 
             st.error(
-                f"Unable to process this file: {e}"
+                f"Something went wrong while reading the file: {e}"
             )
 
-    else:
 
-        st.info(
-            "👆 Upload an Excel or CSV file to get started."
-        )
-
-
-# =========================================================
-# OPTION 2 — MANUAL ENTRY
-# =========================================================
+# ============================================================
+# MANUAL INPUT
+# ============================================================
 
 else:
 
-    st.subheader(
-        "✍️ Enter Financial Data"
-    )
+    st.subheader("✍️ Enter Financial Data")
 
-    st.write(
-        "Enter your latest financial figures below."
-    )
-
-    col1, col2 = st.columns(2)
-
-    # -----------------------------------------------------
-    # INCOME STATEMENT
-    # -----------------------------------------------------
+    col1, col2, col3 = st.columns(3)
 
     with col1:
-
-        st.markdown(
-            "### 💰 Income Statement"
-        )
 
         revenue = st.number_input(
             "Revenue",
             min_value=0.0,
-            value=1000000.0
+            value=0.0
         )
 
         cogs = st.number_input(
-            "Cost of Goods Sold (COGS)",
+            "COGS",
             min_value=0.0,
-            value=600000.0
+            value=0.0
         )
 
         operating_expenses = st.number_input(
             "Operating Expenses",
             min_value=0.0,
-            value=200000.0
+            value=0.0
         )
 
         interest_expense = st.number_input(
             "Interest Expense",
             min_value=0.0,
-            value=20000.0
+            value=0.0
         )
 
         tax_expense = st.number_input(
             "Tax Expense",
             min_value=0.0,
-            value=36000.0
+            value=0.0
         )
-
-    # -----------------------------------------------------
-    # BALANCE SHEET
-    # -----------------------------------------------------
 
     with col2:
 
-        st.markdown(
-            "### 🏦 Balance Sheet"
-        )
-
         cash = st.number_input(
-            "Cash & Cash Equivalents",
+            "Cash",
             min_value=0.0,
-            value=100000.0
+            value=0.0
         )
 
         accounts_receivable = st.number_input(
             "Accounts Receivable",
             min_value=0.0,
-            value=150000.0
+            value=0.0
         )
 
         inventory = st.number_input(
             "Inventory",
             min_value=0.0,
-            value=200000.0
+            value=0.0
         )
 
         current_assets = st.number_input(
             "Current Assets",
             min_value=0.0,
-            value=500000.0
+            value=0.0
         )
+
+    with col3:
 
         total_assets = st.number_input(
             "Total Assets",
             min_value=0.0,
-            value=1000000.0
+            value=0.0
         )
 
         current_liabilities = st.number_input(
             "Current Liabilities",
             min_value=0.0,
-            value=300000.0
+            value=0.0
         )
 
         total_liabilities = st.number_input(
             "Total Liabilities",
             min_value=0.0,
-            value=500000.0
+            value=0.0
         )
 
         equity = st.number_input(
-            "Shareholders' Equity",
+            "Equity",
             min_value=0.0,
-            value=500000.0
+            value=0.0
         )
 
 
-# =========================================================
-# FINANCIAL CALCULATIONS
-# =========================================================
+# ============================================================
+# CALCULATIONS
+# ============================================================
 
 gross_profit = revenue - cogs
 
-operating_profit = (
-    gross_profit - operating_expenses
+operating_profit = gross_profit - operating_expenses
+
+profit_before_tax = operating_profit - interest_expense
+
+net_profit = profit_before_tax - tax_expense
+
+
+# ============================================================
+# RATIOS
+# ============================================================
+
+gross_margin = (
+    gross_profit / revenue * 100
+    if revenue != 0 else 0
 )
 
-profit_before_tax = (
-    operating_profit - interest_expense
+operating_margin = (
+    operating_profit / revenue * 100
+    if revenue != 0 else 0
 )
 
-net_profit = (
-    profit_before_tax - tax_expense
+net_margin = (
+    net_profit / revenue * 100
+    if revenue != 0 else 0
+)
+
+roa = (
+    net_profit / total_assets * 100
+    if total_assets != 0 else 0
+)
+
+roe = (
+    net_profit / equity * 100
+    if equity != 0 else 0
+)
+
+current_ratio = (
+    current_assets / current_liabilities
+    if current_liabilities != 0 else 0
+)
+
+quick_ratio = (
+    (current_assets - inventory) / current_liabilities
+    if current_liabilities != 0 else 0
+)
+
+cash_ratio = (
+    cash / current_liabilities
+    if current_liabilities != 0 else 0
 )
 
 working_capital = (
     current_assets - current_liabilities
 )
 
+debt_ratio = (
+    total_liabilities / total_assets
+    if total_assets != 0 else 0
+)
 
-# =========================================================
-# PROFITABILITY RATIOS
-# =========================================================
+debt_to_equity = (
+    total_liabilities / equity
+    if equity != 0 else 0
+)
 
-if revenue > 0:
+equity_ratio = (
+    equity / total_assets
+    if total_assets != 0 else 0
+)
 
-    gross_profit_margin = (
-        gross_profit / revenue
-    ) * 100
+interest_coverage = (
+    operating_profit / interest_expense
+    if interest_expense != 0 else 0
+)
 
-    operating_profit_margin = (
-        operating_profit / revenue
-    ) * 100
+asset_turnover = (
+    revenue / total_assets
+    if total_assets != 0 else 0
+)
 
-    net_profit_margin = (
-        net_profit / revenue
-    ) * 100
+receivables_turnover = (
+    revenue / accounts_receivable
+    if accounts_receivable != 0 else 0
+)
 
-else:
+dso = (
+    accounts_receivable / revenue * 365
+    if revenue != 0 else 0
+)
 
-    gross_profit_margin = 0
-    operating_profit_margin = 0
-    net_profit_margin = 0
-
-
-if total_assets > 0:
-
-    roa = (
-        net_profit / total_assets
-    ) * 100
-
-else:
-
-    roa = 0
-
-
-if equity > 0:
-
-    roe = (
-        net_profit / equity
-    ) * 100
-
-else:
-
-    roe = 0
-
-
-# =========================================================
-# LIQUIDITY RATIOS
-# =========================================================
-
-if current_liabilities > 0:
-
-    current_ratio = (
-        current_assets /
-        current_liabilities
-    )
-
-    quick_ratio = (
-        current_assets - inventory
-    ) / current_liabilities
-
-    cash_ratio = (
-        cash /
-        current_liabilities
-    )
-
-else:
-
-    current_ratio = 0
-    quick_ratio = 0
-    cash_ratio = 0
-
-
-# =========================================================
-# SOLVENCY RATIOS
-# =========================================================
-
-if total_assets > 0:
-
-    debt_ratio = (
-        total_liabilities /
-        total_assets
-    ) * 100
-
-    equity_ratio = (
-        equity /
-        total_assets
-    ) * 100
-
-else:
-
-    debt_ratio = 0
-    equity_ratio = 0
-
-
-if equity > 0:
-
-    debt_to_equity = (
-        total_liabilities /
-        equity
-    )
-
-else:
-
-    debt_to_equity = 0
-
-
-if interest_expense > 0:
-
-    interest_coverage = (
-        operating_profit /
-        interest_expense
-    )
-
-else:
-
-    interest_coverage = 0
-
-
-# =========================================================
-# EFFICIENCY RATIOS
-# =========================================================
-
-if total_assets > 0:
-
-    asset_turnover = (
-        revenue /
-        total_assets
-    )
-
-else:
-
-    asset_turnover = 0
-
-
-if accounts_receivable > 0:
-
-    receivables_turnover = (
-        revenue /
-        accounts_receivable
-    )
-
-    dso = (
-        accounts_receivable /
-        revenue
-    ) * 365
-
-else:
-
-    receivables_turnover = 0
-    dso = 0
-
-
-if inventory > 0:
-
-    inventory_turnover = (
-        cogs /
-        inventory
-    )
-
-else:
-
-    inventory_turnover = 0
-
-
-# =========================================================
-# DASHBOARD
-# =========================================================
-
-st.divider()
-
-st.header(
-    "📊 Financial Dashboard"
+inventory_turnover = (
+    cogs / inventory
+    if inventory != 0 else 0
 )
 
 
-# =========================================================
-# KPI CARDS
-# =========================================================
+# ============================================================
+# DASHBOARD
+# ============================================================
+
+st.divider()
+
+st.header("📊 Financial Dashboard")
 
 k1, k2, k3, k4 = st.columns(4)
 
@@ -672,44 +812,42 @@ with k2:
 with k3:
 
     st.metric(
-        "Operating Profit",
-        f"{operating_profit:,.0f}"
+        "Net Profit",
+        f"{net_profit:,.0f}"
     )
 
 with k4:
 
     st.metric(
-        "Net Profit",
-        f"{net_profit:,.0f}"
+        "Current Ratio",
+        f"{current_ratio:.2f}"
     )
 
 
-# =========================================================
-# PROFITABILITY
-# =========================================================
+# ============================================================
+# PROFITABILITY RATIOS
+# ============================================================
 
-st.subheader(
-    "📈 Profitability Ratios"
-)
+st.subheader("💰 Profitability")
 
 p1, p2, p3, p4, p5 = st.columns(5)
 
 with p1:
     st.metric(
         "Gross Margin",
-        f"{gross_profit_margin:.2f}%"
+        f"{gross_margin:.2f}%"
     )
 
 with p2:
     st.metric(
         "Operating Margin",
-        f"{operating_profit_margin:.2f}%"
+        f"{operating_margin:.2f}%"
     )
 
 with p3:
     st.metric(
         "Net Margin",
-        f"{net_profit_margin:.2f}%"
+        f"{net_margin:.2f}%"
     )
 
 with p4:
@@ -725,13 +863,11 @@ with p5:
     )
 
 
-# =========================================================
+# ============================================================
 # LIQUIDITY
-# =========================================================
+# ============================================================
 
-st.subheader(
-    "💧 Liquidity Ratios"
-)
+st.subheader("💧 Liquidity")
 
 l1, l2, l3, l4 = st.columns(4)
 
@@ -760,252 +896,37 @@ with l4:
     )
 
 
-# =========================================================
+# ============================================================
 # SOLVENCY
-# =========================================================
+# ============================================================
 
-st.subheader(
-    "🏦 Solvency Ratios"
-)
+st.subheader("🏦 Solvency")
 
 s1, s2, s3, s4 = st.columns(4)
 
 with s1:
     st.metric(
         "Debt Ratio",
-        f"{debt_ratio:.2f}%"
+        f"{debt_ratio:.2f}"
     )
 
 with s2:
     st.metric(
-        "Debt-to-Equity",
+        "Debt / Equity",
         f"{debt_to_equity:.2f}"
     )
 
 with s3:
     st.metric(
         "Equity Ratio",
-        f"{equity_ratio:.2f}%"
+        f"{equity_ratio:.2f}"
     )
 
 with s4:
     st.metric(
         "Interest Coverage",
-        f"{interest_coverage:.2f}x"
+        f"{interest_coverage:.2f}"
     )
 
 
-# =========================================================
-# EFFICIENCY
-# =========================================================
-
-st.subheader(
-    "⚙️ Efficiency Ratios"
-)
-
-e1, e2, e3, e4 = st.columns(4)
-
-with e1:
-    st.metric(
-        "Asset Turnover",
-        f"{asset_turnover:.2f}x"
-    )
-
-with e2:
-    st.metric(
-        "Receivables Turnover",
-        f"{receivables_turnover:.2f}x"
-    )
-
-with e3:
-    st.metric(
-        "DSO",
-        f"{dso:.1f} days"
-    )
-
-with e4:
-    st.metric(
-        "Inventory Turnover",
-        f"{inventory_turnover:.2f}x"
-    )
-
-
-# =========================================================
-# PROFIT TABLE
-# =========================================================
-
-st.divider()
-
-st.subheader(
-    "🧾 Profit Calculation"
-)
-
-profit_data = pd.DataFrame({
-    "Metric": [
-        "Revenue",
-        "COGS",
-        "Gross Profit",
-        "Operating Expenses",
-        "Operating Profit",
-        "Interest Expense",
-        "Profit Before Tax",
-        "Tax Expense",
-        "Net Profit"
-    ],
-
-    "Amount": [
-        revenue,
-        cogs,
-        gross_profit,
-        operating_expenses,
-        operating_profit,
-        interest_expense,
-        profit_before_tax,
-        tax_expense,
-        net_profit
-    ]
-})
-
-st.dataframe(
-    profit_data,
-    use_container_width=True,
-    hide_index=True
-)
-
-
-# =========================================================
-# CHARTS
-# =========================================================
-
-st.divider()
-
-st.header(
-    "📊 Financial Charts"
-)
-
-
-# =========================================================
-# CHART 1 — PROFIT BREAKDOWN
-# =========================================================
-
-st.subheader(
-    "💰 Profit Breakdown"
-)
-
-profit_chart_data = pd.DataFrame({
-    "Metric": [
-        "Revenue",
-        "Gross Profit",
-        "Operating Profit",
-        "Net Profit"
-    ],
-
-    "Amount": [
-        revenue,
-        gross_profit,
-        operating_profit,
-        net_profit
-    ]
-})
-
-fig_profit = px.bar(
-    profit_chart_data,
-    x="Metric",
-    y="Amount",
-    title="Revenue & Profit Breakdown",
-    text="Amount"
-)
-
-fig_profit.update_traces(
-    texttemplate="%{text:,.0f}",
-    textposition="outside"
-)
-
-fig_profit.update_layout(
-    xaxis_title="",
-    yaxis_title="Amount",
-    showlegend=False
-)
-
-st.plotly_chart(
-    fig_profit,
-    use_container_width=True
-)
-
-
-# =========================================================
-# CHART 2 — EXPENSE STRUCTURE
-# =========================================================
-
-st.subheader(
-    "💸 Expense Structure"
-)
-
-expense_chart_data = pd.DataFrame({
-    "Expense": [
-        "COGS",
-        "Operating Expenses",
-        "Interest Expense",
-        "Tax Expense"
-    ],
-
-    "Amount": [
-        cogs,
-        operating_expenses,
-        interest_expense,
-        tax_expense
-    ]
-})
-
-fig_expense = px.pie(
-    expense_chart_data,
-    names="Expense",
-    values="Amount",
-    title="Expense Distribution",
-    hole=0.45
-)
-
-st.plotly_chart(
-    fig_expense,
-    use_container_width=True
-)
-
-
-# =========================================================
-# CHART 3 — FINANCIAL POSITION
-# =========================================================
-
-st.subheader(
-    "🏦 Financial Position"
-)
-
-position_chart_data = pd.DataFrame({
-    "Category": [
-        "Total Assets",
-        "Total Liabilities",
-        "Equity"
-    ],
-
-    "Amount": [
-        total_assets,
-        total_liabilities,
-        equity
-    ]
-})
-
-fig_position = px.bar(
-    x=["Total Assets", "Total Liabilities", "Equity"],
-    y=[total_assets, total_liabilities, equity],
-    labels={"x": "Category", "y": "Amount"},
-    title="Assets vs Liabilities vs Equity"
-)
-
-fig_position.update_layout(
-    title="Assets vs Liabilities vs Equity",
-    xaxis_title="Category",
-    yaxis_title="Amount",
-    template="plotly_white",
-    height=450
-)
-
-st.plotly_chart(fig_position, use_container_width=True)
+# ===
